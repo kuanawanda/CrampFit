@@ -2,36 +2,37 @@ function DNAevent = find_events(cf)
 %FIND_EVENTS Finds events and returns an array of DNAevent structs
 %   events = find_events(cf)
 %   This is just an example of how to use CrampFit.
-
-    % Alternatively, instead of passing a CrampFit instance to the code,
-    % you could just initialize one here:
-    % cf = CrampFit(filename);
-    % and then add any virtual signals you need, set up the panels, and
-    % then start finding events on your merry way...
+%   AK 20140727 for finding events with graphene nanopores
 
     DNAevent = [];
 
-    thresh = 0.07;
+    % Define event depth threshold.
+    thresh = 1.0;
     
     % use the signal specified in the second panel of CrampFit for the
     % event finding. you'd probably just hardcode this in your own code.
     sig = cf.psigs(2).sigs;
 
-    % loop through entire file, a bit at a time
-    curind = 0;
+    % loop through section between cursors
+    curs = getCursors(cf);
+    cursIdx = curs/cf.data.si;
+    searchBegin = cursIdx(1);
+    searchEnd = cursIdx(2);
+    
+    searchIdx = cursIdx(1);
     
     while 1
         % find next data exceeding threshold, stepping current index
-        curind = cf.data.findNext(@(d) d(:,sig) > thresh, curind);
+        searchIdx = cf.data.findNext(@(d) d(:,sig) < -1*thresh, searchIdx);
         
         % if we didn't find any, we're done with the file
-        if curind < 0
+        if searchIdx < 0
             break
         end
         
-        imin = curind;
+        imin = searchIdx;
         % find the end of the event
-        imax = cf.data.findNext(@(d) d(:,sig) < 0.75*thresh,curind);
+        imax = cf.data.findNext(@(d) d(:,sig) > -0.75*thresh,searchIdx);
         
         % make sure we have an end for the event
         if imax < 0
@@ -43,13 +44,14 @@ function DNAevent = find_events(cf)
         imax = imax+1;
         
         % and move curind too
-        curind = imax;
+        searchIdx = imax;
         
         % event? maybe event?
         ts = cf.data.si*[imin imax];
         
         % time range to view, extended past the event a bit
-        viewt = [ts(1)-0.001, ts(2)+0.001];
+        %viewt = [ts(1)-0.001, ts(2)+0.001];
+        viewt = [searchBegin searchEnd];
         
         % we've decided we have a possibly good event, then
         dna = [];

@@ -1,12 +1,14 @@
 function cf = cf_launch(s)
     % CF_LAUNCH()
-    %   This is a 'launcher' file for CrampFit. It is designed to start an
-    %   instance of CrampFit in a specified folder and to give it the 
-    %   keyboard callback behavior you want.
+    % AK 20140729 launcher for graphene nanopore data
+    %   
+    % This is a 'launcher' file for CrampFit. It is designed to start an
+    % instance of CrampFit in a specified folder and to give it the 
+    % keyboard callback behavior you want.
 
     % this sets the default directory for File->Open
     if nargin < 1
-        s = 'W:\CrampData\';
+        s = '/Users/kuanawanda/CramfitAK';
     end
 	cf = CrampFit(s);
     
@@ -22,6 +24,8 @@ function cf = cf_launch(s)
         % to figure out what the keys are called, uncomment this line
         %disp(e);
         
+        %{
+        leave out range editing for now
         if strcmp(e.Character,'k')
             % remove a range of points between cursors
             xlim = cf.getCursors();
@@ -43,23 +47,30 @@ function cf = cf_launch(s)
             cf.refresh();
             % and display some stuff
             fprintf('Removed %f to %f\n',xlim(1),xlim(2));
-            
-        elseif strcmp(e.Character,'f')
+        %}
+    
+        if strcmp(e.Character,'f')
             % create the requisite virtual signals
             
+            %define smoothing time scale length (sec)
+            %should be long compared to events but short compared
+            %to low frequency noise.
+            smoothlength = .05;
+            smoothn = smoothlength/cf.data.si;
+            
             % subselected data filter
-            f_rm = cf.data.addVirtualSignal(@(d) filt_rmrange(d,ranges),'Range-edited');
+            %f_rm = cf.data.addVirtualSignal(@(d) filt_rmrange(d,ranges),'Range-edited');
             % high pass acts on subselected data
-            f_hp = cf.data.addVirtualSignal(@(d) filt_hp(d,4,200),'High-pass',f_rm);
-            % tell median to act on high-passed data
-            f_med = cf.data.addVirtualSignal(@(d) filt_med(d,15),'Median',f_hp);
+            %f_hp = cf.data.addVirtualSignal(@(d) filt_hp(d,4,200),'High-pass',f_rm);
             
-            % also set which signals to draw in each panel, you can play
-            % with this all you like
-            cf.setSignalPanel(1, f_rm(1));
+            % median acting on original data
+            f_med = cf.data.addVirtualSignal(@(d) filt_med(d,30),'Median');
+            % zeroed
+            f_0 = cf.data.addVirtualSignal(@(d) filt_zeroed(d,smoothn),'Zeroed');
             
-            % draw both median-filtered panels
-            cf.addSignalPanel(f_med);
+            
+            % add panel with zeroed data            
+            cf.addSignalPanel(f_0);
 
             disp('Filters added')
         

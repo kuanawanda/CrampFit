@@ -52,26 +52,18 @@ function cf = cf_launch(s)
         if strcmp(e.Character,'f')
             % create the requisite virtual signals
             
-            %define smoothing time scale length (sec)
-            %should be long compared to events but short compared
-            %to low frequency noise.
-            smoothlength = .05;
-            smoothn = smoothlength/cf.data.si;
+            %define time scale for zeroed data (subtract high pass).
+            maxLength = 20e-3;
+            f_cutoff = 1/maxLength;
             
-            % subselected data filter
-            %f_rm = cf.data.addVirtualSignal(@(d) filt_rmrange(d,ranges),'Range-edited');
-            % high pass acts on subselected data
-            %f_hp = cf.data.addVirtualSignal(@(d) filt_hp(d,4,200),'High-pass',f_rm);
-            
-            % median acting on original data
-            f_med = cf.data.addVirtualSignal(@(d) filt_med(d,30),'Median');
-            % zeroed
-            f_0 = cf.data.addVirtualSignal(@(d) filt_zeroed(d,smoothn),'Zeroed');
-            
-            
-            % add panel with zeroed data            
-            cf.addSignalPanel(f_0);
+            % add panel with zeroed data     
+            f_hpb = cf.data.addVirtualSignal(@(d) filt_hpb(d,4,f_cutoff),'Zeroed');       
+            cf.addSignalPanel(f_hpb);
 
+            % WARNING - if you add other virtual signals
+            % add it AFTER this one, otherwise it will 
+            % mess with the event finding.
+            
             disp('Filters added')
         
         elseif strcmp(e.Character,'n')

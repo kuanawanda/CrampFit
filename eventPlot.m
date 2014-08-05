@@ -110,3 +110,15 @@ right_axis_ratio = hist_axis_ratio;
 right_axis_ratio(1) = hist_axis_ratio(1)/2.4;
 set(right_axis,'PlotBoxAspectRatio',right_axis_ratio);
 
+
+
+avgDepth = mean(eventdepth);
+stdDepth = std(eventdepth);
+avgLength = mean(eventlength);
+stdLength = std(eventlength);
+
+pm = setstr(177);
+disp(['Depth: ' num2str(avgDepth) pm num2str(stdDepth) 'nA']);
+disp(['Length: ' num2str(avgLength) pm num2str(stdLength) 'us'])
+
+

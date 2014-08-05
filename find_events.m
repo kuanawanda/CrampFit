@@ -18,7 +18,7 @@ function DNAevent = find_events(cf)
     DNAevent = [];
 
     % Define event depth threshold.
-    thresh = 1.5;
+    thresh = 1.65;
     
     % Define number of samples to include before and after event
     blSamp = 1000; %equivalent to 2ms
@@ -99,7 +99,8 @@ function DNAevent = find_events(cf)
         flagPt = searchIdx;
         
         % find the end of the event
-        endIdx = cf.data.findNext(@(d) d(:,zerod) > -0.2*thresh, startIdx);
+        endIdx = cf.data.findNext(@(d) d(:,zerod) > -0.25*thresh |...
+                d(:,1)/cf.data.si > startIdx + 1e5, startIdx);
         
         % make sure we have an end for the event
         if endIdx < 0
@@ -172,8 +173,9 @@ function DNAevent = find_events(cf)
             drawnow();
             
             % find the event start
-            searchIdx = cf.data.findNext(@(d) d(:,orig)...
-                 < bl-0.25*thresh, searchIdx); % use 25% of thresh to catch begin
+            searchIdx = cf.data.findNext(@(d) d(:,orig) < bl-0.25*thresh...
+                | d(:,1)/cf.data.si > searchIdx + 1e5, searchIdx); 
+                % use 25% of thresh to catch begin
 
             % if we didn't find any, we're in trouble
             if searchIdx < 0
@@ -183,7 +185,8 @@ function DNAevent = find_events(cf)
             startIdx = searchIdx;
         
             % find the end of the event
-            endIdx = cf.data.findNext(@(d) d(:,orig) > bl - 0.25c*thresh, startIdx);
+            endIdx = cf.data.findNext(@(d) d(:,orig) > bl - 0.25*thresh |...
+                d(:,1)/cf.data.si > startIdx + 1e5, startIdx);
 
             % if we dont' have an end, we're also in trouble 
             if endIdx < 0
@@ -214,7 +217,11 @@ function DNAevent = find_events(cf)
             % looking.
             if dna.blockage < 0.5*thresh
                 searchIdx = endIdx;
-                continue
+                if searchIdx > flagPt + 3*blSamp;
+                    break
+                else
+                    continue
+                end
             end
        
             

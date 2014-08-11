@@ -18,7 +18,7 @@ function DNAevent = find_events(cf)
     DNAevent = [];
 
     % Define event depth threshold.
-    thresh = 1.65;
+    thresh = 1.55;
     
     % Define number of samples to include before and after event
     blSamp = 1000; %equivalent to 2ms
@@ -30,7 +30,7 @@ function DNAevent = find_events(cf)
 
     % Set Y-scale. 
     cf.psigs(1).resetY()
-    cf.psigs(2).setY([-6 3])
+    cf.psigs(2).setY([-4 2])
     
     % Get cursor data
     curs = cf.getCursors();
@@ -55,6 +55,7 @@ function DNAevent = find_events(cf)
         cf.setView(viewt);
         cf.refresh();
         drawnow();
+       
         
         % First, find event in zeroed data.
         
@@ -87,7 +88,7 @@ function DNAevent = find_events(cf)
         if searchIdx > searchEnd
             disp('Search Completed')
             break
-        else if searchIdx < 0
+        elseif searchIdx < 0
             disp('Reached End of File')
             break % break if at end of file
         end
@@ -113,30 +114,26 @@ function DNAevent = find_events(cf)
         % time range to view, 2*blSamp before and after event
         viewt = cf.data.si*[startIdx-2*blSamp endIdx+2*blSamp];
         cf.setView(viewt);
-                
-        %{
+               
         % we've decided we have a possibly good event, then
-        dna = [];
+        tempevent = [];
         
         % store the data we want, including times
         % note that we're only grabbing the signal we're analyzing
-        dna.data = cf.data.get(startIdx:endIdx,[1 zerod]);
-
-        % and the start and end times for the event
-        dna.tstart = ts(1);
-        dna.tend = ts(2);
+        tempevent.data = cf.data.get(startIdx:endIdx,[1 zerod]);
 
         % the average current blockage
-        dna.blockage = abs(mean(dna.data(:,2)));
+        tempevent.blockage = abs(mean(tempevent.data(:,2)));
         
         % now query on-screen, see what we think
         % first, zoom in
         cf.setView(viewt);
         
         % then, draw some stuff
+        cf.clearAxes();
         h = cf.getAxes(2);
         plot(h, [viewt(1) ts(1) ts(1) ts(2) ts(2) viewt(2)],...
-            [0 0 -dna.blockage -dna.blockage 0 0],'r');
+            [0 0 -tempevent.blockage -tempevent.blockage 0 0],'r');
         %}
         
         % Now go to original data to fit event
@@ -148,8 +145,8 @@ function DNAevent = find_events(cf)
         avgBefore = mean(blBefore(:,2));
         avgAfter = mean(blAfter(:,2));
         bl = (avgBefore + avgAfter) / 2; 
-        cf.psigs(1).setY([-6+bl 3+bl]);
-        cf.psigs(2).setY([-6 3]);
+        cf.psigs(1).setY([-4+bl 2+bl]);
+        cf.psigs(2).setY([-4 2]);
         
     
         % draw avgBefore and avgAfter
@@ -168,14 +165,14 @@ function DNAevent = find_events(cf)
             searchIdx = startIdx - 2*blSamp;
             
         while 1
-            cf.clearAxes();
+            
             cf.refresh();
             drawnow();
             
             % find the event start
-            searchIdx = cf.data.findNext(@(d) d(:,orig) < bl-0.25*thresh...
+            searchIdx = cf.data.findNext(@(d) d(:,orig) < bl-tempevent.blockage/2 ...
                 | d(:,1)/cf.data.si > searchIdx + 1e5, searchIdx); 
-                % use 25% of thresh to catch begin
+                % use half max for thresh (to avoid filter artifacts)
 
             % if we didn't find any, we're in trouble
             if searchIdx < 0
@@ -185,7 +182,7 @@ function DNAevent = find_events(cf)
             startIdx = searchIdx;
         
             % find the end of the event
-            endIdx = cf.data.findNext(@(d) d(:,orig) > bl - 0.25*thresh |...
+            endIdx = cf.data.findNext(@(d) d(:,orig) > bl - tempevent.blockage/2 |...
                 d(:,1)/cf.data.si > startIdx + 1e5, startIdx);
 
             % if we dont' have an end, we're also in trouble 
@@ -241,10 +238,9 @@ function DNAevent = find_events(cf)
             if (k == 'z')
                 % move search cursor up 
                 searchIdx = searchIdx + 20;
+                cf.setCursors(cf.data.si*[searchIdx searchEnd]);
                 continue
             else
-                % move search cursor past event we just found
-                searchIdx = flagPt+dna.length/cf.data.si;
                 break
             end
         end
@@ -255,9 +251,21 @@ function DNAevent = find_events(cf)
             return
         elseif (k == 'r')
             disp('Event Discarded');
+            
+            %allow user to adjust cursor after event find
+            cursmov = cf.getCursors();
+            cursmovIdx = cursmov/cf.data.si;
+            searchIdx = cursmovIdx(1);
+            cf.setCursors(cf.data.si*[searchIdx searchEnd]);
+            
+            % move search cursor past event we just found
+            searchIdx = searchIdx+2*blSamp;
             continue
         end
     
+        % move search cursor past event we just found
+        searchIdx = searchIdx+2*blSamp;
+        
         % save DNA data if it's a good event
         if isempty(DNAevent)
             DNAevent = dna;

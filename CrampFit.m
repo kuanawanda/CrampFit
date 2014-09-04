@@ -111,7 +111,7 @@ classdef CrampFit < handle
             
             % start making GUI objects
             obj.fig = figure('Name','CrampFit','MenuBar','none',...
-                'NumberTitle','off','DockControls','off');
+                'NumberTitle','off','WindowStyle','normal','DockControls','off');
             
             % set its position
             oldunits = get(obj.fig,'Units');

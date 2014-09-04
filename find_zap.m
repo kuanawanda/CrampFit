@@ -24,6 +24,8 @@ function zapData = find_zap(cf)
     %%
     % Initialize    
     zapData = [];
+    bias = .1; %100mV
+    thickness = 0.6; %0.6 nm for graphene
 
     % Define event depth threshold.
     threshUp = 40;
@@ -62,8 +64,7 @@ function zapData = find_zap(cf)
     endIdx = cf.data.findNext(@(d)...
         d(:,orig) < threshDown, searchIdx);
     
-    endIdx = endIdx -.01/cf.data.si;
-        
+    endIdx = endIdx -.01/cf.data.si; 
                 
     % define event times
     ts = cf.data.si*[startIdx endIdx];
@@ -71,14 +72,23 @@ function zapData = find_zap(cf)
     zapData(1).startIdx = startIdx;
     zapData(1).endIdx = endIdx;
     zapData(1).data = cf.data.get(startIdx:endIdx,[1 orig]);
-    zapData(1).avg = mean(zapData(1).data(:,2));           
+    zapData(1).avgI = mean(zapData(1).data(:,2));           
+    zapData(1).avgD = dcalc(zapData(1).avgI/bias,thickness); 
+    zapData(1).tquartI = prctile(zapData(1).data(:,2),75);
+    zapData(1).tquartD = dcalc(zapData(1).tquartI/bias,thickness); 
+    zapData(1).bquartI = prctile(zapData(1).data(:,2),25);
+    zapData(1).bquartD = dcalc(zapData(1).bquartI/bias,thickness);
     
     %draw some stuff
     h = cf.getAxes(1);
-    plot(h, [ts(1) ts(1) ts(2) ts(2)],...
-       [-2 5 5 -2 ],'r');
+    %plot(h, [ts(1) ts(1) ts(2) ts(2)],...
+    %   [-2 5 5 -2 ],'r');
     plot(h, [ts(1) ts(2)],...
-       [zapData(1).avg zapData(1).avg],'k','linewidth',3); 
+       [zapData(1).tquartI zapData(1).tquartI],'g','linewidth',1); 
+    plot(h, [ts(1) ts(2)],...
+       [zapData(1).bquartI zapData(1).bquartI],'g','linewidth',1); 
+    plot(h, [ts(1) ts(2)],...
+       [zapData(1).avgI zapData(1).avgI],'k','linewidth',3); 
    
     % zapData index is i
     i = 2;
@@ -140,82 +150,60 @@ function zapData = find_zap(cf)
         
         % make sure we have an end for the event
         if endIdx < 0
-            break
+            endIdx = searchEnd;
         end
         
          if endIdx > searchEnd
             %disp('Search Completed')
-            break
+            endIdx = searchEnd;
          end
          
         zapData(i).startIdx = startIdx;
         zapData(i).endIdx = endIdx;
         zapData(i).data = cf.data.get(startIdx:endIdx,[1 orig]);
-        zapData(i).avg = mean(zapData(i).data(:,2));
+        zapData(i).avgI = mean(zapData(i).data(:,2));
+        zapData(i).avgD = dcalc(zapData(i).avgI/bias,thickness);
+        zapData(i).tquartI = prctile(zapData(i).data(:,2),75);
+        zapData(i).tquartD = dcalc(zapData(i).tquartI/bias,thickness); 
+        zapData(i).bquartI = prctile(zapData(i).data(:,2),25);
+        zapData(i).bquartD = dcalc(zapData(i).bquartI/bias,thickness);
         
         % define event times
         ts = cf.data.si*[startIdx endIdx];
         
         % draw some stuff
         h = cf.getAxes(1);
+        %plot(h, [ts(1) ts(2)],...
+         %   [5 5],'r');
         plot(h, [ts(1) ts(2)],...
-            [5 5],'r');
+       [zapData(i).avgI zapData(i).avgI],'k-','linewidth',3);  
         plot(h, [ts(1) ts(2)],...
-       [zapData(i).avg zapData(i).avg],'k-','linewidth',3); 
-       
+       [zapData(i).tquartI zapData(i).tquartI],'g','linewidth',1); 
+        plot(h, [ts(1) ts(2)],...
+       [zapData(i).bquartI zapData(i).bquartI],'g','linewidth',1); 
+
+        % query user key input
+        user_input = input('Enter zap voltage (250ns): ');
+        if isempty(user_input) == 0;
+            current_voltage = user_input;
+        end
+            zapData(i-1).voltage = current_voltage;
+
         i = i + 1;
-        %{
-
-            % query user key input
-            disp(['Event found at t = ' num2str(dna.tstart)]);
-            disp('Press any key to accept, "r" to reject, "z" to skip noise');
-            k = cf.waitKey();
-
-            % handle key input
-            if (k == 'z')
-                % move search cursor up 
-                searchIdx = searchIdx + 20;
-                cf.setCursors(cf.data.si*[searchIdx searchEnd]);
-                continue
-            else
-                break
-            end
-            
-            
-        end
-        %}
-            
-            
-        k = 'p';    
-        % handle key input
-        if (k == 'q')
-            return
-        elseif (k == 'r')
-            disp('Event Discarded');
-            
-            %allow user to adjust cursor after event find
-            cursmov = cf.getCursors();
-            cursmovIdx = cursmov/cf.data.si;
-            searchIdx = cursmovIdx(1);
-            cf.setCursors(cf.data.si*[searchIdx searchEnd]);
-            
-            % move search cursor past event we just found
-            searchIdx = searchIdx+blSamp;
-            continue
-        end
-    
         % move search cursor past event we just found
-        searchIdx = searchIdx+blSamp;
-        
-
-        %{
-        % save DNA data if it's a good event
-        if isempty(zapData)
-            zapData = dna;
-        else
-            zapData(end+1) = dna;
-        end
-        %}
+        searchIdx = searchIdx+blSamp;   
+    
     end
+    
+    %last level has no zap
+    zapData(end).voltage = [];
+    
+for i = 1:length(zapData)-1
+   zapData(i).deltG = (zapData(i+1).avgI - zapData(i).avgI)/bias;
+   zapData(i).deltD = (zapData(i+1).avgD - zapData(i).avgD);
+end
+
+
+
 end
 

@@ -8,9 +8,11 @@ function cf = cf_launch(s)
 
     % this sets the default directory for File->Open
     if nargin < 1
-        s = '/Users/kuanawanda/CramfitAK';
+        s = 'Z:Graphene Pores';
     end
-	cf = CrampFit(s);
+
+    
+    cf = CrampFit(s);
     
     % variable to hold the ranges we are trimming
     ranges = [];
@@ -52,12 +54,17 @@ function cf = cf_launch(s)
         if strcmp(e.Character,'f')
             % create the requisite virtual signals
             
+             % add 5kHz filtered data     
+            f_lp = cf.data.addVirtualSignal(@(d) filt_lp(d,4,10000),'10kHz');       
+            %cf.addSignalPanel(f_hpb);
+            
             %define time scale for zeroed data (subtract high pass).
             maxLength = 20e-3;
             f_cutoff = 1/maxLength;
             
+           
             % add panel with zeroed data     
-            f_hpb = cf.data.addVirtualSignal(@(d) filt_hpb(d,4,f_cutoff),'Zeroed');       
+            f_hpb = cf.data.addVirtualSignal(@(d) filt_hpb(d,4,f_cutoff),'Zeroed',f_lp);       
             cf.addSignalPanel(f_hpb);
 
             % WARNING - if you add other virtual signals

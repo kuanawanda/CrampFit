@@ -13,9 +13,9 @@ I_start=0; %start of current blocl
 I_end=4; %end of current
 t_start=0; %time
 t_end=1000;
-b_points=15;
-t_points=15;% number of time cells
-I_points=15; % number of blockage cells
+b_points=25;
+t_points=25;% number of time cells
+I_points=25; % number of blockage cells
 
 
 b_step=linspace(b_start, b_end, b_points+1);

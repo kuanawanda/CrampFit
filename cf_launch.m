@@ -54,7 +54,7 @@ function cf = cf_launch(s)
         if strcmp(e.Character,'f')
             % create the requisite virtual signals
             
-             % add 5kHz filtered data     
+             % add 10kHz filtered data     
             f_lp = cf.data.addVirtualSignal(@(d) filt_lp(d,4,10000),'10kHz');       
             %cf.addSignalPanel(f_hpb);
             

@@ -1,12 +1,15 @@
-function zapData = find_zap(cf)
+function zapData = find_zap(cf,bias)
 % FIND_ZAP Finds zaps for zapping file. 
 % Asks user for zap information.
 % Stores zap data
 % Based on DNA find_event code.
-%   events = find_events(cf)
+%   
+% bias is voltage applied by axozap during zapping
 
 % Zapping relay adds characteristic spikes -90nA, then 1 sec pause, 
 % then +50nA (disconnecting, tne reconnecting the axopatch to the pore)
+
+% for beta = 0.1 on axopatch, spikes are -10, +10
 
 % We'll use those spikes to identify zaps.
 % We also need to find bias switches sometimes used to check offset 
@@ -24,12 +27,19 @@ function zapData = find_zap(cf)
     %%
     % Initialize    
     zapData = [];
-    bias = .1; %100mV
+    %bias = .1; %100mV
     thickness = 0.6; %0.6 nm for graphene
 
     % Define event depth threshold.
     threshUp = 40;
     threshDown = -70;
+    
+    %beta = .1 
+    threshUp = 15;
+    threshDown = -4; %lower bottom thresh catches checks for offsets.
+    
+    
+    
     
     % Define number of samples to include before and after event
     blSamp = 1.1/cf.data.si; %equivalent to 1.1 sec
@@ -72,12 +82,16 @@ function zapData = find_zap(cf)
     zapData(1).startIdx = startIdx;
     zapData(1).endIdx = endIdx;
     zapData(1).data = cf.data.get(startIdx:endIdx,[1 orig]);
-    zapData(1).avgI = mean(zapData(1).data(:,2));           
+    zapData(1).avgI = mean(zapData(1).data(:,2));  
+    zapData(1).avgG = mean(zapData(1).data(:,2))/bias;           
     zapData(1).avgD = dcalc(zapData(1).avgI/bias,thickness); 
     zapData(1).tquartI = prctile(zapData(1).data(:,2),75);
+    zapData(1).tquartG = prctile(zapData(1).data(:,2),75)/bias;
     zapData(1).tquartD = dcalc(zapData(1).tquartI/bias,thickness); 
     zapData(1).bquartI = prctile(zapData(1).data(:,2),25);
+    zapData(1).bquartG = prctile(zapData(1).data(:,2),25)/bias;
     zapData(1).bquartD = dcalc(zapData(1).bquartI/bias,thickness);
+    zapData(1).voltage = [];
     
     %draw some stuff
     h = cf.getAxes(1);
@@ -162,10 +176,13 @@ function zapData = find_zap(cf)
         zapData(i).endIdx = endIdx;
         zapData(i).data = cf.data.get(startIdx:endIdx,[1 orig]);
         zapData(i).avgI = mean(zapData(i).data(:,2));
+        zapData(i).avgG = mean(zapData(i).data(:,2))/bias;
         zapData(i).avgD = dcalc(zapData(i).avgI/bias,thickness);
         zapData(i).tquartI = prctile(zapData(i).data(:,2),75);
+        zapData(i).tquartG = prctile(zapData(i).data(:,2),75)/bias;
         zapData(i).tquartD = dcalc(zapData(i).tquartI/bias,thickness); 
         zapData(i).bquartI = prctile(zapData(i).data(:,2),25);
+        zapData(i).bquartG = prctile(zapData(i).data(:,2),25)/bias;
         zapData(i).bquartD = dcalc(zapData(i).bquartI/bias,thickness);
         
         % define event times
@@ -187,7 +204,9 @@ function zapData = find_zap(cf)
         if isempty(user_input) == 0;
             current_voltage = user_input;
         end
-            zapData(i-1).voltage = current_voltage;
+            %voltage is voltage of pulse BEFORE level
+            %first level has no voltage
+            zapData(i).voltage = current_voltage;
 
         i = i + 1;
         % move search cursor past event we just found
@@ -195,15 +214,15 @@ function zapData = find_zap(cf)
     
     end
     
-    %last level has no zap
-    zapData(end).voltage = [];
     
-for i = 1:length(zapData)-1
-   zapData(i).deltG = (zapData(i+1).avgI - zapData(i).avgI)/bias;
-   zapData(i).deltD = (zapData(i+1).avgD - zapData(i).avgD);
+for i = 2:length(zapData)
+    %ith delta is the change BEFORE the ith level
+   zapData(i).deltG = (zapData(i).avgG - zapData(i-1).avgG);
+   zapData(i).deltD = (zapData(i).avgD - zapData(i-1).avgD);
+   %first level has no delta
 end
 
 
-
+%zapPlot(zapData);
 end
 

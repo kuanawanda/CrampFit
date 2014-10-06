@@ -18,7 +18,7 @@ function DNAevent = find_events(cf)
     DNAevent = [];
 
     % Define event depth threshold.
-    thresh = 1.35;
+    thresh = 1.25;
     
     % Define number of samples to include before and after event
     blSamp = 1000; %equivalent to 2ms

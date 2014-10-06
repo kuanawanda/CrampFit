@@ -1,4 +1,4 @@
-function [Vs, Is] = plot_iv(filename)
+function [Vs, Is] = multiPlot_IV();
 %PLOT_IV Plots IV curves from the file in filename, if it can.
 %   IMPORTANT NOTE: Because I couldn't find the voltage information in the
 %   abf file header, the voltages are hardcoded to be -150mV to 150mV, you
@@ -6,29 +6,39 @@ function [Vs, Is] = plot_iv(filename)
 %   Also, it only averages the last 25% of each sweep to get point, change
 %   if you want (this is for very capacitive pores).
 
-%Aaron Manually set params for plotting
-
-xlim = [-165 165];
-ylim = [-11 11];
-
 hold on;
+
+% UI import data files (.mat file saved from "find_zap" function)
+[FileName,PathName] = uigetfile('*.mat', 'MultiSelect', 'on');
+if (length(char(FileName(1)))==1) % FileName(anything)
+    nFiles = 1;
+else nFiles = length(FileName);
+end
+
+for fInd=1:nFiles,
+    if (length(char(FileName(1)))==1)
+        filepath = [PathName FileName];
+    else
+        filepath = [PathName char(FileName(fInd))];
+    end
+
     try
         % try to load the entire file
-        if filename(end-2) == 'a'
-            [d,~,h]=abfload(filename);
+        if filepath(end-2) == 'a'
+            [d,~,h]=abfload(filepath);
         else
-            [d,h]=cbfload(filename);
+            [d,h]=cbfload(filepath);
             % permute it to match abf
             d = permute(d,[2 3 1]);
         end
     catch
-        fprintf(2,'Failed to load file %s as I-V!\n',filename);
+        fprintf(2,'Failed to load file %s as I-V!\n',filepath);
         return
     end
 
     % check if it's an IV curve
     if (numel(size(d)) ~= 3)
-        fprintf(2,'%s is not an IV curve.\n',filename);
+        fprintf(2,'%s is not an IV curve.\n',filepath);
         return
     end
     
@@ -46,35 +56,29 @@ hold on;
     % Get current values into a 1D/2D array, from 3D
     Is = reshape(mean(d(indst:end,:,:),1),sz(2:3))';
     
-    %hfig = figure('Name',sprintf('I-V Plot of %s',filename),'NumberTitle','off');
-    
+
+    hfig = findobj('Name',sprintf('I-V Plot of %s',filepath));
+    if isempty(hfig)
+        hfig = figure('Name',sprintf('I-V Plot of %s',filepath),'NumberTitle','off');       
+    end    
+%figure(hfig);   
     % draw the axes
     ax = axes('Position',[0.01 0.01 0.98 0.9],'Box','off','NextPlot','add');
-
     % draw the data points
-    plts = plot(ax,Vs,flipud(Is),'bo','MarkerSize',7,'MarkerEdgeColor','black');
-   % Aaron added flipud so that sign of I is correct.
-    
-    
+    plts = plot(ax,Vs,Is,'Marker','o','MarkerSize',2,'MarkerEdgeColor','black');
     % set them to filled circles
     for i=1:length(plts)
         set(plts(i),'MarkerFaceColor',get(plts(i),'Color'));
     end
-    %title('Quick I-V Plot');
-
-    ylabel('Current (nA)');
-    
+    title('Quick I-V Plot');
     % with lightly colored grid lines
     set(ax,'XTickLabel','','YTickLabel','','XColor',0.8*[1 1 1],'YColor',0.8*[1 1 1]);
-    
     grid on
     % now manually make axes, cuz matlab is dumb
     % first, extend axes limits slightly
     set(ax,'XLimMode','manual','YLimMode','manual');
-    %{
-    xlim = 1.1*get(ax,'XLim')
-    ylim = 1.1*get(ax,'YLim')
-    %}
+    xlim = 1.1*get(ax,'XLim');
+    ylim = 1.1*get(ax,'YLim');
     set(ax,'XLim',xlim);
     set(ax,'YLim',ylim);
     
@@ -86,7 +90,7 @@ hold on;
     dV = 40; % mV
 	% V ticks, step from 20 to end-ish
     Vts = dV/2:dV:Vs(end);
-    tickX = [-fliplr(Vts) Vts]
+    tickX = [-fliplr(Vts) Vts];
     
     % tick spacing in Y, do a clever thing
     dy = ylim(2)/4;
@@ -114,11 +118,11 @@ hold on;
     % now draw the labels
     for i=1:length(tickX)
         text(tickX(i),0,{'','',num2str(tickX(i))},'VerticalAlignment','middle',...
-            'HorizontalAlignment','center','FontSize',12,'Parent',ax);
+            'HorizontalAlignment','center','FontSize',8,'Parent',ax);
     end
     for i=1:length(tickY)
         text(0,tickY(i),['    ' num2str(tickY(i),'%#4.3g')],'VerticalAlignment','middle',...
-            'HorizontalAlignment','left','FontSize',12,'Parent',ax);
+            'HorizontalAlignment','left','FontSize',8,'Parent',ax);
     end
     
     % and add a bit to the lines
@@ -134,12 +138,12 @@ hold on;
     hs = [];
     for i=1:sz(2)
         % fit the lines
-        coeffs = polyfit(Vs,flipud(Is(:,i)),1);
+        coeffs = polyfit(Vs,Is(:,i),1);
         % draw the line
         ys = coeffs(1)*xs + coeffs(2);
-        hs(end+1) = plot(ax,xs,ys,'LineStyle','-','Linewidth',2,'Color',get(plts(i),'Color'));
+        hs(end+1) = plot(ax,xs,ys,'LineStyle','-.','Color',get(plts(i),'Color'));
         % and set the legend
-        set(hs(end),'DisplayName',sprintf('\\sigma = %4.1d nS',1000*coeffs(1)));
+        set(hs(end),'DisplayName',sprintf('\\sigma = %4.4g nS',1000*coeffs(1)));
     end
     
     % now move original lines to the top
@@ -151,9 +155,7 @@ hold on;
     % and display only those lines in the legend
     legend(hs,M,'Location','NorthWest');
     legend('show');
-
-    
-    %{
+end
     % also make a close callback, cause I'm spoiled and used to this
     function keyFun(~,e)
         if strcmp(e.Key,'escape')
@@ -163,4 +165,4 @@ hold on;
     end
     set(hfig,'WindowKeyPressFcn',@keyFun);
 end
-%}
+

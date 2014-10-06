@@ -116,9 +116,12 @@ avgDepth = mean(eventdepth);
 stdDepth = std(eventdepth);
 avgLength = mean(eventlength);
 stdLength = std(eventlength);
+avgBaseline = mean(baseline);
+stdBaseline = std(baseline);
 
 pm = setstr(177);
 disp(['Depth: ' num2str(avgDepth) pm num2str(stdDepth) 'nA']);
 disp(['Length: ' num2str(avgLength) pm num2str(stdLength) 'us'])
+disp(['Baseline: ' num2str(avgBaseline) pm num2str(stdBaseline) 'nA'])
 
 

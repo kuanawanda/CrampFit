@@ -1,10 +1,19 @@
-function zapPlot(zapData, voltage_select);
+function zapPlot(zapData, voltage_select,cond);
 % Takes data from analyzed zap data (function find_zap) and plots various
 % parameters.
 thickness = .6;
 
 % voltage_select is which voltage pulses to examine: usually 5 V.
-
+    %clear temp variables
+    voltage = [];
+    all_deltG = [];
+    all_deltD = [];
+    G =[];
+    D = [];
+    tquartG = [];
+    tquartD = [];
+    bquartG = [];
+    bquartD = [];
 % Read in data struct
 for i = 1:length(zapData)
     % delta fields have empty first entry.
@@ -43,7 +52,7 @@ ylabel ('Number of Pulses','FontSize', 20);
 %% Electrical Pulse Histogram - Diameter
 
 % select only those pulses after a given voltage pulse
-IdxSelect = abs(voltage) == voltage_select;
+IdxSelect = ceil(abs(voltage)) == voltage_select;
 deltD = all_deltD(IdxSelect);
 
 % Have to be careful - want levels BEFORE zaps, not after
@@ -94,7 +103,7 @@ DvDeltD = findobj('Name','deltD vs D');
 figure(DvDeltD);
 
 plot(Dselect, deltD,'ko');
-[p,S,mu] = polyfit(Dselect,deltD,1);
+p = polyfit(Dselect,deltD,1)
 line([min(Dselect) max(Dselect)],[p(1)*min(Dselect)+p(2)...
     p(1)* max(Dselect)+p(2)],'linewidth',1);
 %line([min(Dselect) max(Dselect)],[0 0],'linewidth',1,'color','k');
@@ -118,6 +127,7 @@ figure(epf);
 cmap = colormap(hot(10));
 set(colorbar,'YTick',[1:1:6])
 
+clf(epf);
 hold on;
 
 markersize = 15;
@@ -158,13 +168,13 @@ ylabel(haxes(2),'Diameter (nm)','FontSize', 16) % label right y-axis
 xlabel(haxes(2),'Pulse Number','FontSize', 16) % label x-axis
 
 %set(haxes(1),'Xlim',[0,22],'Ylim',[0 65],'YTick',[0:10:60]);
-set(haxes(1),'Ylim',[0 65],'YTick',[0:10:60]);
+set(haxes(1),'Ylim',[-5 95],'YTick',[0:10:90]);
 
-for i = 1:6
-    Dticks(i) = Gcalc(i,thickness);
+for i = 1:9
+    Dticks(i) = Gcalc(i,thickness,cond);
 end
 %set(haxes(2),'Xlim',[0,22],'Ylim',[0 65],'YTick',Dticks,'YTickLabel',[1:1:6]);
-set(haxes(2),'YTick',Dticks,'Ylim',[0 65],'YTickLabel',[1:1:6]);
+set(haxes(2),'YTick',Dticks,'Ylim',[-5 95],'YTickLabel',[1:1:9]);
 
 grid(haxes(2),'on');
 

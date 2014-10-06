@@ -1,10 +1,13 @@
-function zapData = find_zap(cf,bias)
+function [zapData] = find_zap(cf,bias,cond)
 % FIND_ZAP Finds zaps for zapping file. 
 % Asks user for zap information.
 % Stores zap data
 % Based on DNA find_event code.
 %   
 % bias is voltage applied by axozap during zapping
+% cond is conductivity of solution
+%1M = 11.2
+%3M = 24.5
 
 % Zapping relay adds characteristic spikes -90nA, then 1 sec pause, 
 % then +50nA (disconnecting, tne reconnecting the axopatch to the pore)
@@ -35,8 +38,8 @@ function zapData = find_zap(cf,bias)
     threshDown = -70;
     
     %beta = .1 
-    threshUp = 15;
-    threshDown = -4; %lower bottom thresh catches checks for offsets.
+    threshUp = 7;
+    threshDown = -1; %lower bottom thresh catches checks for offsets.
     
     
     
@@ -84,13 +87,13 @@ function zapData = find_zap(cf,bias)
     zapData(1).data = cf.data.get(startIdx:endIdx,[1 orig]);
     zapData(1).avgI = mean(zapData(1).data(:,2));  
     zapData(1).avgG = mean(zapData(1).data(:,2))/bias;           
-    zapData(1).avgD = dcalc(zapData(1).avgI/bias,thickness); 
+    zapData(1).avgD = real(dcalc(zapData(1).avgI/bias,thickness,cond)); 
     zapData(1).tquartI = prctile(zapData(1).data(:,2),75);
     zapData(1).tquartG = prctile(zapData(1).data(:,2),75)/bias;
-    zapData(1).tquartD = dcalc(zapData(1).tquartI/bias,thickness); 
+    zapData(1).tquartD = real(dcalc(zapData(1).tquartI/bias,thickness,cond)); 
     zapData(1).bquartI = prctile(zapData(1).data(:,2),25);
     zapData(1).bquartG = prctile(zapData(1).data(:,2),25)/bias;
-    zapData(1).bquartD = dcalc(zapData(1).bquartI/bias,thickness);
+    zapData(1).bquartD = real(dcalc(zapData(1).bquartI/bias,thickness,cond));
     zapData(1).voltage = [];
     
     %draw some stuff
@@ -177,14 +180,14 @@ function zapData = find_zap(cf,bias)
         zapData(i).data = cf.data.get(startIdx:endIdx,[1 orig]);
         zapData(i).avgI = mean(zapData(i).data(:,2));
         zapData(i).avgG = mean(zapData(i).data(:,2))/bias;
-        zapData(i).avgD = dcalc(zapData(i).avgI/bias,thickness);
+        zapData(i).avgD = real(dcalc(zapData(i).avgI/bias,thickness,cond));
         zapData(i).tquartI = prctile(zapData(i).data(:,2),75);
         zapData(i).tquartG = prctile(zapData(i).data(:,2),75)/bias;
-        zapData(i).tquartD = dcalc(zapData(i).tquartI/bias,thickness); 
+        zapData(i).tquartD = real(dcalc(zapData(i).tquartI/bias,thickness,cond)); 
         zapData(i).bquartI = prctile(zapData(i).data(:,2),25);
         zapData(i).bquartG = prctile(zapData(i).data(:,2),25)/bias;
-        zapData(i).bquartD = dcalc(zapData(i).bquartI/bias,thickness);
-        
+        zapData(i).bquartD = real(dcalc(zapData(i).bquartI/bias,thickness,cond));
+       
         % define event times
         ts = cf.data.si*[startIdx endIdx];
         
@@ -222,7 +225,7 @@ for i = 2:length(zapData)
    %first level has no delta
 end
 
-
-%zapPlot(zapData);
+ 
+%zapPlot(zapData,5,cond);
 end
 
